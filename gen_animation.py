@@ -1,7 +1,9 @@
 import asyncio
 import random
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
+import numpy as np
 from moviepy.editor import ImageSequenceClip
+
 
 class Wheel:
     def __init__(self, participants, section_size=72):
@@ -54,16 +56,12 @@ class Wheel:
         for i in range(self.num_sections):
             start_angle = i * self.section_size
             end_angle = (i + 1) * self.section_size
-            section_draw = ImageDraw.Draw(img)
-            section_draw.pieslice([(50, 50), (450, 450)], start_angle, end_angle, fill=self.section_textures[i], outline=self.section_outlines[i], width=self.section_widths[i])
-
-        for i in range(self.num_sections):
-            start_angle = i * self.section_size
-            end_angle = (i + 1) * self.section_size
             text_angle = start_angle + self.section_size / 2
             text_x = 250 + 200 * np.cos(np.deg2rad(text_angle))
             text_y = 250 + 200 * np.sin(np.deg2rad(text_angle))
             draw.text((text_x, text_y), self.participants[i], font=self.font, fill=(255, 255, 255))
+
+            draw.pieslice([(50, 50), (450, 450)], start_angle, end_angle, fill=self.section_textures[i], outline=self.section_outlines[i], width=self.section_widths[i])
 
         arrow_points = [(250, 250), (250, 50)]
         arrow_img = Image.new('RGBA', (500, 500))
@@ -86,7 +84,7 @@ class Wheel:
         for i in range(self.num_sections):
             start_angle = i * self.section_size
             end_angle = (i + 1) * self.section_size
-            section_width = random.randint(30, 50)
+            section_width = self.section_widths[i] * 2
             section_draw = ImageDraw.Draw(img)
             section_draw.pieslice([(50, 50), (450, 450)], start_angle, end_angle, fill=None, outline=self.section_outlines[i], width=section_width)
 
@@ -94,16 +92,17 @@ class Wheel:
         for i in range(self.num_sections):
             start_angle = i * self.section_size
             end_angle = (i + 1) * self.section_size
-            section_alpha = random.randint(128, 255)
+            alpha = random.randint(128, 255)
             section_img = Image.new('RGBA', (500, 500))
             section_draw = ImageDraw.Draw(section_img)
             section_draw.pieslice([(50, 50), (450, 450)], start_angle, end_angle, fill=self.section_textures[i], outline=None)
-            section_img.putalpha(section_alpha)
+            section_img.putalpha(alpha)
             img.alpha_composite(section_img, (0, 0))
 
         draw.pieslice([(200, 200), (300, 300)], self.current_angle - 5, self.current_angle + 5, fill=self.arrow_color)
-        img = img.rotate(self.current_angle, resample=Image.BICUBIC, expand=True)
-        return img
+        wheel_img = img.rotate(self.current_angle, resample=Image.BICUBIC, expand=True)
+
+        return wheel_img
 
     def rotate_wheel(self):
         # Вращаем колесо на случайный угол
@@ -115,15 +114,9 @@ class Wheel:
         img = self.create_wheel_image()
         return img
 
+
 class Animation:
     def __init__(self, participants, duration=100, loop=0):
-        """
-        Конструктор класса Animation.
-
-        :param participants: список участников.
-        :param duration: продолжительность анимации в кадрах.
-        :param loop: количество повторений анимации (0 - бесконечно).
-        """
         self.participants = participants
         self.duration = duration
         self.loop = loop
@@ -137,13 +130,14 @@ class Animation:
                 img = wheel.get_wheel_image()
                 frames.append(img)
             clip = ImageSequenceClip(frames, fps=30)
-            if self.loop == 0:
+            if self.loop == 0:            
                 clip = clip.loop(-1)
             else:
                 clip = clip.loop(n=self.loop)
             clip.write_videofile('output.mp4', fps=30)
         except ValueError as e:
             print(e)
+
 
 if __name__ == '__main__':
     participants = ['Иван', 'Петр', 'Сергей', 'Андрей', 'Дмитрий']
